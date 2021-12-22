@@ -212,7 +212,7 @@
           :data-index="attribute.dataIndex"
           :save-disabled="false"
           :has-used="hasUsed"
-          :submit-format="formatSubmitData"
+          :submit-format="serializeFormData"
           @on-submit="handleSaveProcess"
           @on-cancel="handleCancelProcess">
         </process-form>
@@ -242,7 +242,7 @@
 
 <script>
   import processForm from './process-form.vue'
-  import processTable from './process'
+  import processTable from './process-table.vue'
   import { mapActions, mapGetters, mapMutations } from 'vuex'
   import to from 'await-to-js'
   import {
@@ -251,6 +251,8 @@
     MENU_BUSINESS_SET_TEMPLATE
   } from '@/dictionary/menu-symbol'
   import Bus from '@/utils/bus'
+  import { formatValue } from '@/utils/tools'
+  import cloneDeep from 'lodash/cloneDeep'
   export default {
     components: {
       processTable,
@@ -457,7 +459,7 @@
         this.loadSourceTemplate()
         const [getProcessErr] = await to(this.getProcessList(this.sourceTemplateId))
         if (!getProcessErr) {
-          this.$store.commit('serviceProcess/setLocalProcessTemplate', this.formatSubmitData(this.processList))
+          this.$store.commit('serviceProcess/setLocalProcessTemplate', this.processList)
         }
       },
       loadSourceTemplate() {
@@ -530,6 +532,9 @@
             requestId: this.request.processList
           }
         }).then((data) => {
+          if (!this.isCreateMode) {
+
+          }
           this.processList = data.info.map(template => ({
             process_id: template.id,
             ...template.property
@@ -545,28 +550,41 @@
           this.formData.secondaryClassification = ''
         }
       },
-      formatSubmitData(data = {}) {
-        Object.keys(data).forEach((key) => {
+      /**
+       * 序列化需要提交的表单数据，把可能值会为空的重置为后端能接受的默认值
+       * @param {Object} data 需要传给后台的数据
+       */
+      serializeFormData(data = {}) {
+        const retData = cloneDeep(data)
+
+        Object.keys(retData).forEach((key) => {
           const property = this.properties.find(property => property.bk_property_id === key)
-          if (property && property.bk_property_type === 'table') {
-            (data[key].value || []).forEach((row) => {
+          const item = retData[key]
+
+          // 表格类型的值需要单独处理
+          if (property?.bk_property_type === 'table') {
+            item?.value?.forEach((row) => {
               Object.keys(row).forEach((rowKey) => {
                 if (typeof row[rowKey] === 'object') {
                   const option = property.option || []
                   const columnProperty = option.find(columnProperty => columnProperty.bk_property_id === rowKey) || {}
-                  row[rowKey].value = this.$tools.formatValue(row[rowKey].value, columnProperty)
+                  row[rowKey].value = formatValue(row[rowKey].value, columnProperty)
                 }
               })
             })
-          } else if (typeof data[key] === 'object') {
-            data[key].value = this.$tools.formatValue(data[key].value, property)
+            return
+          }
+
+          if (typeof item === 'object') {
+            item.value = formatValue(item.value, property)
           }
         })
-        return data
+
+        return retData
       },
       handleSaveProcess(values, changedValues, type) {
         const data = type === 'create' ? values : changedValues
-        const processValues = this.formatSubmitData(data)
+        const processValues = this.serializeFormData(data)
         if (type === 'create') {
           this.createProcessTemplate({
             params: {
@@ -658,7 +676,7 @@
             processes: this.processList.map((process) => {
               delete process.sign_id
               return {
-                spec: this.formatSubmitData(process)
+                spec: this.serializeFormData(process)
               }
             })
           },

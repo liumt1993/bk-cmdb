@@ -92,6 +92,13 @@ export function isEmptyValue(value) {
   return value === '' || value === null || value === void 0
 }
 
+/**
+ * 当值为空时，格式化值为后台能接受的默认值类型
+ * @param {string} value 需要转换的值
+ * @param {Object} property 后台定义的属性对象
+ * @param {string} property.bk_property_type 后台定义的属性值类型
+ * @returns {string} 格式化的值
+ */
 export function formatValue(value, property) {
   if (!(isEmptyValue(value) && property)) {
     return value
