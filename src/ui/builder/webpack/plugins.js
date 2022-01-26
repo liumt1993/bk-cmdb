@@ -25,7 +25,11 @@ const getCommonPlugins = config => ([
     'process.env': modeValue(prodEnv, devEnv)
   }),
 
-  new VueLoaderPlugin(),
+  new VueLoaderPlugin({
+    compilerOptions: {
+      whitespace: 'condense'
+    }
+  }),
 
   new HtmlWebpackPlugin({
     filename: 'index.html', // dest, relative output.path

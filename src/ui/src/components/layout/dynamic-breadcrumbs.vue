@@ -60,7 +60,8 @@
         align-items: center;
         padding: 14px 20px;
         height: 53px;
-        border-bottom: 1px solid $borderColor;
+        background: #ffffff;
+        box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.06);
         .icon-cc-arrow {
             display: block;
             width: 24px;

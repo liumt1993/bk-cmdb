@@ -386,11 +386,11 @@ $color: #63656E;
         }
         &.is-relative-active.is-link,
         &.active.is-link {
-            background-color: #3a84ff;
+            background-color: #E1ECFF;
             .menu-icon,
             .menu-name,
             .icon-close {
-                color: #fff;
+                color: #3A84FF;
             }
         }
         .menu-info {
@@ -451,8 +451,8 @@ $color: #63656E;
         }
         &.is-relative-active,
         &.active {
-            color: #fff;
-            background-color: #3a84ff;
+            color: #3A84FF;
+            background-color: #E1ECFF;
             &::before {
                 background-color: #fff;
             }
