@@ -16,7 +16,7 @@
           <bk-button slot-scope="{ disabled }"
             theme="primary"
             :disabled="disabled || modelType === 'disabled'"
-            @click="showModelDialog()">
+            @click="showModelDialog('bk_uncategorized')">
             {{$t('新建模型')}}
           </bk-button>
         </cmdb-auth>
@@ -66,17 +66,18 @@
       <li class="group-item clearfix"
         v-for="(classification, classIndex) in currentClassifications"
         :key="classIndex">
-        <div class="group-title">
-          <div class="title-info"
-            v-bk-tooltips="{
-              disabled: isEditable(classification),
-              content: $t('内置模型组不支持添加和修改'),
-              placement: 'right'
-            }">
+        <div
+          class="group-title"
+          v-bk-tooltips="{
+            disabled: isEditable(classification),
+            content: $t('内置模型组不支持删除和修改'),
+            placement: 'right'
+          }">
+          <div class="title-info">
             <span class="mr5">{{classification['bk_classification_name']}}</span>
             <span class="number">({{classification['bk_objects'].length}})</span>
           </div>
-          <template v-if="isEditable(classification) && modelType !== 'disabled'">
+          <template v-if="modelType !== 'disabled'">
             <cmdb-auth v-if="!mainLoading" class="group-btn ml5"
               :auth="{ type: $OPERATION.C_MODEL, relation: [classification.id] }">
               <bk-button slot-scope="{ disabled }"
@@ -87,7 +88,9 @@
                 <i class="icon-cc-add-line"></i>
               </bk-button>
             </cmdb-auth>
-            <cmdb-auth v-if="!mainLoading && !isUncategoried(classification.bk_classification_id)" class="group-btn"
+            <cmdb-auth
+              v-if="isEditable(classification) && !mainLoading"
+              class="group-btn"
               :auth="{ type: $OPERATION.U_MODEL_GROUP, relation: [classification.id] }">
               <bk-button slot-scope="{ disabled }"
                 theme="primary"
@@ -97,7 +100,9 @@
                 <i class="icon-cc-edit"></i>
               </bk-button>
             </cmdb-auth>
-            <cmdb-auth v-if="!mainLoading && !isUncategoried(classification.bk_classification_id)" class="group-btn"
+            <cmdb-auth
+              v-if="isEditable(classification) && !mainLoading"
+              class="group-btn"
               :auth="{ type: $OPERATION.D_MODEL_GROUP, relation: [classification.id] }">
               <bk-button slot-scope="{ disabled }"
                 theme="primary"
@@ -205,6 +210,7 @@
       :is-show.sync="modelDialog.isShow"
       :group-id.sync="modelDialog.groupId"
       :title="$t('新建模型')"
+      :operating="$loading('createModel')"
       @confirm="saveModel">
     </the-create-model>
 
@@ -253,7 +259,6 @@
       }
     },
     components: {
-      // theModel,
       theCreateModel,
       cmdbMainInject,
       noSearchResults,
@@ -333,13 +338,15 @@
       currentClassifications() {
         let currentClassifications = []
 
-        if (!this.searchModel) {
-          if (!this.modelType) {
-            currentClassifications = this.allClassifications
-          } else {
-            currentClassifications = this.modelType === 'enable' ? this.enableClassifications : this.disabledClassifications
-          }
-        } else {
+        if (!this.searchModel && !this.modelType) {
+          currentClassifications = this.allClassifications
+        }
+
+        if (this.modelType) {
+          currentClassifications = this.modelType === 'enable' ? this.enableClassifications : this.disabledClassifications
+        }
+
+        if (this.searchModel) {
           currentClassifications = this.filterClassifications
         }
 
@@ -428,7 +435,7 @@
         this.topPadding = this.$refs.mainInject.$el.offsetHeight
       },
       isEditable(classification) {
-        return !['bk_biz_topo', 'bk_host_manage', 'bk_organization'].includes(classification.bk_classification_id)
+        return !['bk_uncategorized'].includes(classification.bk_classification_id)
       },
       showGroupDialog(isEdit, group) {
         if (isEdit) {
@@ -540,17 +547,21 @@
           bk_obj_id: data.bk_obj_id,
           userName: this.userName
         }
-        const createModel = await this.createObject({ params, config: { requestId: 'createModel' } })
-        this.curCreateModel = createModel
-        this.sucessDialog.isShow = true
-        this.$http.cancel('post_searchClassificationsObjects')
-        this.getModelInstanceCount(params.bk_obj_id)
-        this.searchClassificationsObjects({
-          params: {}
-        })
-        this.modelDialog.isShow = false
-        this.modelDialog.groupId = ''
-        this.searchModel = ''
+        try {
+          const createModel = await this.createObject({ params, config: { requestId: 'createModel' } })
+          this.curCreateModel = createModel
+          this.sucessDialog.isShow = true
+          this.$http.cancel('post_searchClassificationsObjects')
+          this.getModelInstanceCount(params.bk_obj_id)
+          this.searchClassificationsObjects({
+            params: {}
+          })
+          this.modelDialog.isShow = false
+          this.modelDialog.groupId = ''
+          this.searchModel = ''
+        } catch (error) {
+          console.log(error)
+        }
       },
       modelClick(model) {
         this.$store.commit('objectModel/setActiveModel', model)
@@ -667,7 +678,8 @@
         .group-title {
             display: inline-block;
             margin: 0 40px 0 0;
-            line-height: 21px;
+            height: 22px;
+            line-height: 22px;
             color: #333948;
             outline: 0;
             &:before {
